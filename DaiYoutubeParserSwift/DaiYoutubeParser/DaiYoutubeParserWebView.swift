@@ -13,8 +13,8 @@ extension DaiYoutubeParserWebView: UIWebViewDelegate {
     
     // 錯誤時回報
     class func webView(webView: DaiYoutubeParserWebView, didFailLoadWithError error: NSError?) {
-        webView.terminalWebView()
-        webView.completion?(status: .Fail, url: nil, videoTitle: nil, videoDuration: nil)
+        webView.terminal()
+        webView.fail()
     }
     
 }
@@ -59,10 +59,11 @@ extension DaiYoutubeParserWebView {
     }
     
     // 自身清除
-    private func terminalWebView() {
+    private func terminal() {
         self.stopLoading()
-        self.checkTimer?.invalidate()
-        self.checkTimer = nil
+        if let safeCheckTimer = self.checkTimer {
+            safeCheckTimer.invalidate()
+        }
     }
     
     // 每 1.5 秒確認一次狀態
@@ -72,34 +73,41 @@ extension DaiYoutubeParserWebView {
         }
         
         if Int(safeStatus) > 0 {
-            self.terminalWebView()
-            self.completion?(status: .Fail, url: nil, videoTitle: nil, videoDuration: nil)
+            self.terminal()
+            self.fail()
+        }
+    }
+    
+    // 失敗時候的 callback
+    private func fail() {
+        if let safeCompletion = self.completion {
+            safeCompletion(status: .Fail, url: nil, videoTitle: nil, videoDuration: nil)
         }
     }
     
     // 複寫系統 method
     func webView(arg1: AnyObject?,identifierForInitialRequest arg2: NSMutableURLRequest?, fromDataSource arg3: AnyObject?) -> AnyObject? {
 
-        var isFoundTargetString = false
-        
-        guard let safeURL = arg2?.URL else {
-            return swiftHelper(self, arg1, arg2, arg3)
+        // 檢查 arg2 存在, 而且 URL 有值
+        guard
+            let safeArg2 = arg2,
+            let safeURL = safeArg2.URL
+            else {
+                return messageSendToSuper(self, arg1, arg2, arg3)
         }
         
-        let urlString = String(format: "%@", safeURL)
-        if urlString.containsString("videoplayback?") {
-            isFoundTargetString = true
-        }
-        else if urlString.containsString(".m3u8") {
-            isFoundTargetString = true
-        }
-        
-        if isFoundTargetString {
-            self.completion?(status: .Success, url: urlString, videoTitle: self.videoTitle(), videoDuration: self.duration())
+        // 判斷這個網址是不是有含我們需要的字串內容
+        let urlString = String(safeURL)
+        switch urlString {
+        case _ where urlString.containsString("videoplayback?"):
+            fallthrough
+        case _ where urlString.containsString(".m3u8"):
+            if let safeCompletion = self.completion {
+                safeCompletion(status: .Success, url: urlString, videoTitle: self.videoTitle(), videoDuration: self.duration())
+            }
             return nil
-        }
-        else {
-            return swiftHelper(self, arg1, arg2, arg3)
+        default:
+            return messageSendToSuper(self, arg1, arg2, arg3)
         }
     }
     
@@ -125,20 +133,22 @@ class DaiYoutubeParserWebView: UIWebView {
         }
         
         // 設定新的 DaiYoutubeParserWebView
-        let returnWebView = DaiYoutubeParserWebView(frame: CGRectMake(0, 0, screenSize.width, screenSize.height))
-        returnWebView.delegate = self as? UIWebViewDelegate
-        returnWebView.allowsInlineMediaPlayback = true
-        returnWebView.mediaPlaybackRequiresUserAction = false
-        returnWebView.completion = { [weak returnWebView] (status: DaiYoutubeParserStatus, url: String?, videoTitle: String?, videoDuration: Int?) -> Void in
-            returnWebView?.terminalWebView()
+        let newWebView = DaiYoutubeParserWebView(frame: CGRectMake(0, 0, screenSize.width, screenSize.height))
+        newWebView.delegate = self as? UIWebViewDelegate
+        newWebView.allowsInlineMediaPlayback = true
+        newWebView.mediaPlaybackRequiresUserAction = false
+        newWebView.completion = { [weak newWebView] (status: DaiYoutubeParserStatus, url: String?, videoTitle: String?, videoDuration: Int?) -> Void in
+            if let safeWebView = newWebView {
+                safeWebView.terminal()
+            }
             completion(status: status, url: url, videoTitle: videoTitle, videoDuration: videoDuration)
         }
         
         // 開始讀取本地網頁
         let htmlWithParameterString = String(format: safeOriginalHtmlString, screenSize.width, screenSize.height, youtubeID, videoQualityString)
-        returnWebView.loadHTMLString(htmlWithParameterString, baseURL: NSURL(string: "http://www.example.com"))
-        returnWebView.checkTimer = NSTimer.scheduledTimerWithTimeInterval(1.5, target: returnWebView, selector: "stateCheck:", userInfo: nil, repeats: true)
-        return returnWebView
+        newWebView.loadHTMLString(htmlWithParameterString, baseURL: NSURL(string: "http://www.example.com"))
+        newWebView.checkTimer = NSTimer.scheduledTimerWithTimeInterval(1.5, target: newWebView, selector: "stateCheck:", userInfo: nil, repeats: true)
+        return newWebView
     }
     
 }

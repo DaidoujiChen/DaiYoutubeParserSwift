@@ -18,7 +18,9 @@ extension DemoViewController: UITableViewDataSource {
     
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("UITableViewCell", forIndexPath: indexPath)
-        cell.textLabel?.text = self.dataSource[indexPath.row]
+        if let safeTextLabel = cell.textLabel {
+            safeTextLabel.text = self.dataSource[indexPath.row]
+        }
         return cell
     }
     
@@ -30,9 +32,16 @@ extension DemoViewController: UITableViewDelegate {
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         DaiYoutubeParser.parse(self.dataSource[indexPath.row], screenSize: self.videoContainView.bounds.size, videoQuality: .Highres) { [weak self] (status, url, videoTitle, videoDuration) -> Void in
             
+            // 檢查 callback 回來時 DemoViewController 是不是已經不存在
+            guard let safeSelf = self else {
+                print("DemoViewController Dealloced")
+                return
+            }
+            
             if status == .Success {
+                
+                // 確保所需參數正常
                 guard
-                    let strongSelf = self,
                     let safeURLString = url,
                     let safeURL = NSURL(string: safeURLString),
                     let safeVideoTitle = videoTitle,
@@ -45,13 +54,13 @@ extension DemoViewController: UITableViewDelegate {
                 // 設定顯示資訊
                 let duration = String(format: "%02td:%02td", safeVideoDuration / 60, safeVideoDuration % 60)
                 let title = String(format: "(%@) %@", duration, safeVideoTitle)
-                strongSelf.titleTextField.text = title
-                strongSelf.urlTextField.text = safeURLString
+                safeSelf.titleTextField.text = title
+                safeSelf.urlTextField.text = safeURLString
                 
                 // 如果有正在播放的影片, 先停止他並且移除
-                if strongSelf.avPlayerLayer != nil {
-                    strongSelf.avPlayerLayer?.player?.pause()
-                    strongSelf.avPlayerLayer?.removeFromSuperlayer()
+                if let safeAVPlayerLayer = safeSelf.avPlayerLayer, safePlayer = safeAVPlayerLayer.player {
+                    safePlayer.pause()
+                    safeAVPlayerLayer.removeFromSuperlayer()
                 }
                 
                 // 製作新的播放器
@@ -59,15 +68,15 @@ extension DemoViewController: UITableViewDelegate {
                 let avPlayerItem = AVPlayerItem(asset: avAssert)
                 let avPlayer = AVPlayer(playerItem: avPlayerItem)
                 let avPlayerLayer = AVPlayerLayer(player: avPlayer)
-                avPlayerLayer.frame = strongSelf.videoContainView.bounds
-                strongSelf.videoContainView.layer.addSublayer(avPlayerLayer)
-                strongSelf.avPlayerLayer = avPlayerLayer
+                avPlayerLayer.frame = safeSelf.videoContainView.bounds
+                safeSelf.videoContainView.layer.addSublayer(avPlayerLayer)
+                safeSelf.avPlayerLayer = avPlayerLayer
                 avPlayer.play()
             }
             else {
                 let alert = UIAlertController(title: "Load Video Fail", message: "Handle on Fail", preferredStyle: .Alert)
                 alert.addAction(UIAlertAction(title: "Done", style: .Cancel, handler: nil))
-                self?.presentViewController(alert, animated: true, completion: nil)
+                safeSelf.presentViewController(alert, animated: true, completion: nil)
             }
         }
     }

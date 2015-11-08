@@ -8,4 +8,4 @@
 
 #import <Foundation/Foundation.h>
 
-id swiftHelper(NSObject *self, id arg1, id arg2, id arg3);
+id messageSendToSuper(NSObject *self, id arg1, id arg2, id arg3);

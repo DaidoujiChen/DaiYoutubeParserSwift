@@ -9,7 +9,7 @@
 #import "DaiYoutubeParserRuntime.h"
 #import <objc/message.h>
 
-id swiftHelper(NSObject *self, id arg1, id arg2, id arg3) {
+id messageSendToSuper(NSObject *self, id arg1, id arg2, id arg3) {
     struct objc_super superObject;
     superObject.receiver = self;
     superObject.super_class = class_isMetaClass(object_getClass(self)) ? object_getClass(self.superclass) : self.superclass;
