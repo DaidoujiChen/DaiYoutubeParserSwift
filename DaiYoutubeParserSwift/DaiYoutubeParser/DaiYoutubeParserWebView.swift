@@ -19,29 +19,6 @@ extension DaiYoutubeParserWebView: UIWebViewDelegate {
     
 }
 
-// MARK: Private Class Method
-extension DaiYoutubeParserWebView {
-    
-    // 將列舉轉為字串
-    private class func videoQualityString(videoQuality: DaiYoutubeParserQuality) -> String {
-        switch videoQuality {
-            case .Small:
-                return "small"
-            case .Medium:
-                return "medium"
-            case .Large:
-                return "large"
-            case .HD720:
-                return "hd720"
-            case .HD1080:
-                return "hd1080"
-            case .Highres:
-                return "highres"
-        }
-    }
-    
-}
-
 // MARK: Private Instance Method
 extension DaiYoutubeParserWebView {
     
@@ -67,7 +44,7 @@ extension DaiYoutubeParserWebView {
     }
     
     // 每 1.5 秒確認一次狀態
-    @objc private func stateCheck(timer: NSTimer) {
+    private dynamic func stateCheck(timer: NSTimer) {
         guard let safeStatus = self.stringByEvaluatingJavaScriptFromString("error();") else {
             return
         }
@@ -91,7 +68,7 @@ extension DaiYoutubeParserWebView {
         // 檢查 arg2 存在, 而且 URL 有值
         guard
             let safeArg2 = arg2,
-            let safeURL = safeArg2.URL
+            safeURL = safeArg2.URL
             else {
                 return messageSendToSuper(self, arg1, arg2, arg3)
         }
@@ -121,19 +98,18 @@ class DaiYoutubeParserWebView: UIWebView {
 
     // 建立一個新的 DaiYoutubeParserWebView
     class func createWebView(youtubeID: String, screenSize: CGSize, videoQuality: DaiYoutubeParserQuality, completion: DaiYoutubeParserComplection) -> DaiYoutubeParserWebView? {
-        let videoQualityString = self.videoQualityString(videoQuality)
         
         // 檢查檔案是否讀取正常
         guard
             let safeHtmlFilePath = NSBundle.mainBundle().pathForResource("YoutubeParserBridge", ofType: "html"),
-            let safeOriginalHtmlString = try? String(contentsOfFile: safeHtmlFilePath, encoding: NSUTF8StringEncoding)
+            safeOriginalHtmlString = try? String(contentsOfFile: safeHtmlFilePath, encoding: NSUTF8StringEncoding)
             else {
                 print("Load Local Html File Fail")
                 return nil
         }
         
         // 設定新的 DaiYoutubeParserWebView
-        let newWebView = DaiYoutubeParserWebView(frame: CGRectMake(0, 0, screenSize.width, screenSize.height))
+        let newWebView = DaiYoutubeParserWebView(frame: CGRect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
         newWebView.delegate = self as? UIWebViewDelegate
         newWebView.allowsInlineMediaPlayback = true
         newWebView.mediaPlaybackRequiresUserAction = false
@@ -145,7 +121,7 @@ class DaiYoutubeParserWebView: UIWebView {
         }
         
         // 開始讀取本地網頁
-        let htmlWithParameterString = String(format: safeOriginalHtmlString, screenSize.width, screenSize.height, youtubeID, videoQualityString)
+        let htmlWithParameterString = String(format: safeOriginalHtmlString, screenSize.width, screenSize.height, youtubeID, videoQuality.rawValue.lowercaseString)
         newWebView.loadHTMLString(htmlWithParameterString, baseURL: NSURL(string: "http://www.example.com"))
         newWebView.checkTimer = NSTimer.scheduledTimerWithTimeInterval(1.5, target: newWebView, selector: "stateCheck:", userInfo: nil, repeats: true)
         return newWebView

@@ -9,19 +9,13 @@
 import UIKit
 
 // 影片品質
-enum DaiYoutubeParserQuality {
-    case Small
-    case Medium
-    case Large
-    case HD720
-    case HD1080
-    case Highres
+enum DaiYoutubeParserQuality: String {
+    case Small, Medium, Large, HD720, HD1080, Highres
 }
 
 // 成功或是失敗
 enum DaiYoutubeParserStatus {
-    case Fail
-    case Success
+    case Fail, Success
 }
 
 // closure 縮寫

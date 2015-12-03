@@ -18,9 +18,7 @@ extension DemoViewController: UITableViewDataSource {
     
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("UITableViewCell", forIndexPath: indexPath)
-        if let safeTextLabel = cell.textLabel {
-            safeTextLabel.text = self.dataSource[indexPath.row]
-        }
+        cell.textLabel?.text = self.dataSource[indexPath.row]
         return cell
     }
     
@@ -38,46 +36,39 @@ extension DemoViewController: UITableViewDelegate {
                 return
             }
             
-            if status == .Success {
-                
-                // 確保所需參數正常
-                guard
-                    let safeURLString = url,
-                    let safeURL = NSURL(string: safeURLString),
-                    let safeVideoTitle = videoTitle,
-                    let safeVideoDuration = videoDuration
-                    else {
-                        print("Data Check Fail")
-                        return
-                }
-                
-                // 設定顯示資訊
-                let duration = String(format: "%02td:%02td", safeVideoDuration / 60, safeVideoDuration % 60)
-                let title = String(format: "(%@) %@", duration, safeVideoTitle)
-                safeSelf.titleTextField.text = title
-                safeSelf.urlTextField.text = safeURLString
-                
-                // 如果有正在播放的影片, 先停止他並且移除
-                if let safeAVPlayerLayer = safeSelf.avPlayerLayer, safePlayer = safeAVPlayerLayer.player {
-                    safePlayer.pause()
-                    safeAVPlayerLayer.removeFromSuperlayer()
-                }
-                
-                // 製作新的播放器
-                let avAssert = AVURLAsset(URL: safeURL)
-                let avPlayerItem = AVPlayerItem(asset: avAssert)
-                let avPlayer = AVPlayer(playerItem: avPlayerItem)
-                let avPlayerLayer = AVPlayerLayer(player: avPlayer)
-                avPlayerLayer.frame = safeSelf.videoContainView.bounds
-                safeSelf.videoContainView.layer.addSublayer(avPlayerLayer)
-                safeSelf.avPlayerLayer = avPlayerLayer
-                avPlayer.play()
+            guard
+                let safeURLString = url,
+                safeURL = NSURL(string: safeURLString),
+                safeVideoTitle = videoTitle, safeVideoDuration = videoDuration
+                where status == .Success
+                else {
+                    let alert = UIAlertController(title: "Load Video Fail", message: "Handle on Fail", preferredStyle: .Alert)
+                    alert.addAction(UIAlertAction(title: "Done", style: .Cancel, handler: nil))
+                    safeSelf.presentViewController(alert, animated: true, completion: nil)
+                    return
             }
-            else {
-                let alert = UIAlertController(title: "Load Video Fail", message: "Handle on Fail", preferredStyle: .Alert)
-                alert.addAction(UIAlertAction(title: "Done", style: .Cancel, handler: nil))
-                safeSelf.presentViewController(alert, animated: true, completion: nil)
+            
+            // 設定顯示資訊
+            let duration = String(format: "%02td:%02td", safeVideoDuration / 60, safeVideoDuration % 60)
+            let title = String(format: "(%@) %@", duration, safeVideoTitle)
+            safeSelf.titleTextField.text = title
+            safeSelf.urlTextField.text = safeURLString
+            
+            // 如果有正在播放的影片, 先停止他並且移除
+            if let safeAVPlayerLayer = safeSelf.avPlayerLayer, safePlayer = safeAVPlayerLayer.player {
+                safePlayer.pause()
+                safeAVPlayerLayer.removeFromSuperlayer()
             }
+            
+            // 製作新的播放器
+            let avAssert = AVURLAsset(URL: safeURL)
+            let avPlayerItem = AVPlayerItem(asset: avAssert)
+            let avPlayer = AVPlayer(playerItem: avPlayerItem)
+            let avPlayerLayer = AVPlayerLayer(player: avPlayer)
+            avPlayerLayer.frame = safeSelf.videoContainView.bounds
+            safeSelf.videoContainView.layer.addSublayer(avPlayerLayer)
+            safeSelf.avPlayerLayer = avPlayerLayer
+            avPlayer.play()
         }
     }
     
@@ -91,7 +82,7 @@ class DemoViewController: UIViewController {
     @IBOutlet weak var videoListTableView: UITableView!
     @IBOutlet weak var videoContainView: UIView!
     
-    var dataSource = ["6J1B1NMpX-E", "12345", "2cEi8IpUpBo", "P5KCCfURTCA", "ADkvjHwGQDY", "mIIb3Jf06AA", "ViJ-geMKm0Q", "W43FJw3yKGM", "3iB8TCqagFQ"]
+    private let dataSource = ["6J1B1NMpX-E", "12345", "2cEi8IpUpBo", "P5KCCfURTCA", "ADkvjHwGQDY", "mIIb3Jf06AA", "ViJ-geMKm0Q", "W43FJw3yKGM", "3iB8TCqagFQ"]
     weak var avPlayerLayer: AVPlayerLayer?
 
     override func viewDidLoad() {
