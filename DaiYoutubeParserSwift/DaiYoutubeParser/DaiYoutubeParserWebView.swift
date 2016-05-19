@@ -123,7 +123,7 @@ class DaiYoutubeParserWebView: UIWebView {
         // 開始讀取本地網頁
         let htmlWithParameterString = String(format: safeOriginalHtmlString, screenSize.width, screenSize.height, youtubeID, videoQuality.rawValue.lowercaseString)
         newWebView.loadHTMLString(htmlWithParameterString, baseURL: NSURL(string: "http://www.example.com"))
-        newWebView.checkTimer = NSTimer.scheduledTimerWithTimeInterval(1.5, target: newWebView, selector: "stateCheck:", userInfo: nil, repeats: true)
+        newWebView.checkTimer = NSTimer.scheduledTimerWithTimeInterval(1.5, target: newWebView, selector: #selector(DaiYoutubeParserWebView.stateCheck(_:)), userInfo: nil, repeats: true)
         return newWebView
     }
     
