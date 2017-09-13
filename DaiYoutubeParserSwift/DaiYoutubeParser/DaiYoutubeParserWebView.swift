@@ -12,7 +12,7 @@ import UIKit
 extension DaiYoutubeParserWebView: UIWebViewDelegate {
     
     // 錯誤時回報
-    class func webView(webView: DaiYoutubeParserWebView, didFailLoadWithError error: NSError?) {
+    @nonobjc class func webView(_ webView: DaiYoutubeParserWebView, didFailLoadWithError error: NSError?) {
         webView.terminal()
         webView.fail()
     }
@@ -23,20 +23,22 @@ extension DaiYoutubeParserWebView: UIWebViewDelegate {
 extension DaiYoutubeParserWebView {
     
     // 取得影片 title
-    private func videoTitle() -> String? {
-        return self.stringByEvaluatingJavaScriptFromString("getVideoTitle()")
+    fileprivate func videoTitle() -> String? {
+        return self.stringByEvaluatingJavaScript(from: "getVideoTitle()")
     }
     
     // 取得影片時間
-    private func duration() -> Int? {
-        guard let safeDuration = self.stringByEvaluatingJavaScriptFromString("getDuration()") else {
+    fileprivate func duration() -> Int? {
+        guard
+            let safeDuration = self.stringByEvaluatingJavaScript(from: "getDuration()")
+            else {
             return nil
         }
         return Int(safeDuration)
     }
     
     // 自身清除
-    private func terminal() {
+    fileprivate func terminal() {
         self.stopLoading()
         if let safeCheckTimer = self.checkTimer {
             safeCheckTimer.invalidate()
@@ -44,47 +46,49 @@ extension DaiYoutubeParserWebView {
     }
     
     // 每 1.5 秒確認一次狀態
-    private dynamic func stateCheck(timer: NSTimer) {
-        guard let safeStatus = self.stringByEvaluatingJavaScriptFromString("error();") else {
+    fileprivate dynamic func stateCheck(_ timer: Timer) {
+        guard
+            let safeStatus = self.stringByEvaluatingJavaScript(from: "error();")
+            else {
             return
         }
         
-        if Int(safeStatus) > 0 {
+        if let safeStatusInt = Int(safeStatus), safeStatusInt > 0 {
             self.terminal()
             self.fail()
         }
     }
     
     // 失敗時候的 callback
-    private func fail() {
+    fileprivate func fail() {
         if let safeCompletion = self.completion {
-            safeCompletion(status: .Fail, url: nil, videoTitle: nil, videoDuration: nil)
+            safeCompletion(.fail, nil, nil, nil)
         }
     }
     
     // 複寫系統 method
-    func webView(arg1: AnyObject?,identifierForInitialRequest arg2: NSMutableURLRequest?, fromDataSource arg3: AnyObject?) -> AnyObject? {
+    func webView(_ arg1: AnyObject?,identifierForInitialRequest arg2: NSMutableURLRequest?, fromDataSource arg3: AnyObject?) -> AnyObject? {
 
         // 檢查 arg2 存在, 而且 URL 有值
         guard
             let safeArg2 = arg2,
-            safeURL = safeArg2.URL
+            let safeURL = safeArg2.url
             else {
-                return messageSendToSuper(self, arg1, arg2, arg3)
+                return messageSendToSuper(self, arg1, arg2, arg3) as AnyObject
         }
         
         // 判斷這個網址是不是有含我們需要的字串內容
-        let urlString = String(safeURL)
+        let urlString = String(describing: safeURL)
         switch urlString {
-        case _ where urlString.containsString("videoplayback?"):
+        case _ where urlString.contains("videoplayback?"):
             fallthrough
-        case _ where urlString.containsString(".m3u8"):
+        case _ where urlString.contains(".m3u8"):
             if let safeCompletion = self.completion {
-                safeCompletion(status: .Success, url: urlString, videoTitle: self.videoTitle(), videoDuration: self.duration())
+                safeCompletion(.success, urlString, self.videoTitle(), self.duration())
             }
             return nil
         default:
-            return messageSendToSuper(self, arg1, arg2, arg3)
+            return messageSendToSuper(self, arg1, arg2, arg3) as AnyObject
         }
     }
     
@@ -93,16 +97,16 @@ extension DaiYoutubeParserWebView {
 // MARK: DaiYoutubeParserWebView
 class DaiYoutubeParserWebView: UIWebView {
     
-    private var completion: DaiYoutubeParserComplection?
-    private var checkTimer: NSTimer?
+    fileprivate var completion: DaiYoutubeParserComplection?
+    fileprivate var checkTimer: Timer?
 
     // 建立一個新的 DaiYoutubeParserWebView
-    class func createWebView(youtubeID: String, screenSize: CGSize, videoQuality: DaiYoutubeParserQuality, completion: DaiYoutubeParserComplection) -> DaiYoutubeParserWebView? {
+    class func createWebView(_ youtubeID: String, _ screenSize: CGSize, _ videoQuality: DaiYoutubeParserQuality, _ completion: @escaping DaiYoutubeParserComplection) -> DaiYoutubeParserWebView? {
         
         // 檢查檔案是否讀取正常
         guard
-            let safeHtmlFilePath = NSBundle.mainBundle().pathForResource("YoutubeParserBridge", ofType: "html"),
-            safeOriginalHtmlString = try? String(contentsOfFile: safeHtmlFilePath, encoding: NSUTF8StringEncoding)
+            let safeHtmlFilePath = Bundle.main.path(forResource: "YoutubeParserBridge", ofType: "html"),
+            let safeOriginalHtmlString = try? String(contentsOfFile: safeHtmlFilePath, encoding: String.Encoding.utf8)
             else {
                 print("Load Local Html File Fail")
                 return nil
@@ -117,13 +121,13 @@ class DaiYoutubeParserWebView: UIWebView {
             if let safeWebView = newWebView {
                 safeWebView.terminal()
             }
-            completion(status: status, url: url, videoTitle: videoTitle, videoDuration: videoDuration)
+            completion(status, url, videoTitle, videoDuration)
         }
         
         // 開始讀取本地網頁
-        let htmlWithParameterString = String(format: safeOriginalHtmlString, screenSize.width, screenSize.height, youtubeID, videoQuality.rawValue.lowercaseString)
-        newWebView.loadHTMLString(htmlWithParameterString, baseURL: NSURL(string: "http://www.example.com"))
-        newWebView.checkTimer = NSTimer.scheduledTimerWithTimeInterval(1.5, target: newWebView, selector: #selector(DaiYoutubeParserWebView.stateCheck(_:)), userInfo: nil, repeats: true)
+        let htmlWithParameterString = String(format: safeOriginalHtmlString, screenSize.width, screenSize.height, youtubeID, videoQuality.rawValue.lowercased())
+        newWebView.loadHTMLString(htmlWithParameterString, baseURL: URL(string: "http://www.example.com"))
+        newWebView.checkTimer = Timer.scheduledTimer(timeInterval: 1.5, target: newWebView, selector: #selector(DaiYoutubeParserWebView.stateCheck(_:)), userInfo: nil, repeats: true)
         return newWebView
     }
     

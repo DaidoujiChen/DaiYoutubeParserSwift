@@ -10,30 +10,28 @@ import UIKit
 
 // 影片品質
 enum DaiYoutubeParserQuality: String {
-    case Small, Medium, Large, HD720, HD1080, Highres
+    case small, medium, large, hd720, hd1080, highres
 }
 
 // 成功或是失敗
 enum DaiYoutubeParserStatus {
-    case Fail, Success
+    case fail, success
 }
 
 // closure 縮寫
-typealias DaiYoutubeParserComplection = (status: DaiYoutubeParserStatus, url: String?, videoTitle: String?, videoDuration: Int?) -> Void
+typealias DaiYoutubeParserComplection = (_ status: DaiYoutubeParserStatus, _ url: String?, _ videoTitle: String?, _ videoDuration: Int?) -> Void
 
 class DaiYoutubeParser {
     
-    private static let parserTaskQueue = NSOperationQueue()
+    fileprivate static let parserTaskQueue = OperationQueue()
     
     // parse 某個 youtube id 的影片網址
-    class func parse(youtubeID: String, screenSize: CGSize, videoQuality: DaiYoutubeParserQuality, completion: DaiYoutubeParserComplection) {
+    class func parse(_ youtubeID: String, _ screenSize: CGSize, _ videoQuality: DaiYoutubeParserQuality, _ completion: @escaping DaiYoutubeParserComplection) {
         
         // 加入排程
-        self.parserTaskQueue.addOperationWithBlock { _ -> Void in
-            dispatch_async(dispatch_get_main_queue(), { _ -> Void in
-                DaiYoutubeParserWebView.createWebView(youtubeID, screenSize: screenSize, videoQuality: videoQuality, completion: { (status, url, videoTitle, videoDuration) -> Void in
-                    completion(status: status, url: url, videoTitle: videoTitle, videoDuration: videoDuration)
-                })
+        self.parserTaskQueue.addOperation {
+            DispatchQueue.main.async(execute: {
+                _ = DaiYoutubeParserWebView.createWebView(youtubeID, screenSize, videoQuality, completion)
             })
         }
     }
